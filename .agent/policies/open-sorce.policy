@@ -1,0 +1,378 @@
+version: 1.1
+name: open-source
+description: >
+  Enforces open-source compliance, license awareness, dependency
+  transparency, attribution discipline, and contribution hygiene
+  for Flutter-based Liquid Galaxy hackathon applications.
+  Ensures all third-party code, assets, and APIs used in the project
+  are legally and ethically permissible for public demo and submission.
+
+enforcement_level: strict
+
+rules:
+
+  # ----------------------------------------
+  # 1. License Compliance
+  # ----------------------------------------
+
+  - id: OS-001
+    title: All Dependencies Must Have a Permissive License
+    description: >
+      Every package added to pubspec.yaml must carry a license that permits
+      use in a public hackathon submission and open-source repository.
+      Permitted licenses: MIT, BSD-2, BSD-3, Apache-2.0, ISC.
+      Restricted licenses: GPL, AGPL, LGPL, CC-BY-NC, proprietary.
+    violation_examples:
+      - Adding a GPL-licensed pub.dev package without isolation
+      - Vendoring a library with no license file
+      - Using a package marked "proprietary" or "all rights reserved"
+    required_fix: >
+      Replace with a permissively licensed equivalent or obtain
+      explicit written permission before inclusion.
+    enforcement_check: >
+      Run `flutter pub deps` and cross-reference each package license
+      against pub.dev or its source repository LICENSE file.
+
+  - id: OS-002
+    title: External APIs Must Permit Hackathon and Demo Use
+    description: >
+      Any external API integrated into the application (weather, maps,
+      geospatial, AI, etc.) must explicitly permit non-commercial demo
+      and hackathon usage in its Terms of Service.
+      Free-tier or open APIs are preferred.
+    permitted_apis:
+      - Open-Meteo (open-source, no API key required, CC BY 4.0)
+      - OpenStreetMap Nominatim (ODbL, non-commercial use)
+      - NASA Earthdata open endpoints (public domain)
+      - any API with explicit "free for non-commercial / educational use" ToS
+    restricted_apis:
+      - APIs requiring paid commercial license for demo use
+      - APIs prohibiting automated or programmatic access
+      - APIs that restrict redistribution of response data in open-source repos
+    required_fix: >
+      Confirm ToS compliance before integration. Document the API name,
+      license type, and ToS confirmation in docs/project-overview.md.
+
+  - id: OS-003
+    title: No Vendored Code Without License Attribution
+    description: >
+      Any source code copied or adapted from an external project,
+      tutorial, Stack Overflow answer, or open-source repository
+      must include the original license and attribution in a comment
+      at the top of the file.
+    violation_examples:
+      - Copying a KML generation snippet from GitHub without attribution
+      - Pasting a dart SSH helper from a blog post without credit
+    required_fix: >
+      Add a comment block:
+        // Adapted from: <URL>
+        // Original license: <LICENSE NAME>
+        // Modifications: <brief description>
+
+  # ----------------------------------------
+  # 2. Dependency Hygiene
+  # ----------------------------------------
+
+  - id: OS-010
+    title: pubspec.yaml Must Declare All Direct Dependencies Explicitly
+    description: >
+      No transitive dependency may be relied upon without also declaring
+      it explicitly in pubspec.yaml if the project directly imports it.
+      Implicit transitive dependencies create fragile builds.
+    violation_examples:
+      - Importing a package in Dart code that is only a transitive dependency
+      - Relying on a sub-dependency being present without pinning it
+    required_fix: >
+      Add the package as an explicit dependency in pubspec.yaml
+      with a version constraint.
+
+  - id: OS-011
+    title: Dependency Versions Must Be Constrained
+    description: >
+      All dependencies in pubspec.yaml must use caret (^) or explicit
+      version ranges. Unbounded versions (e.g., "any") are prohibited
+      as they break reproducibility.
+    violation_examples:
+      - "http: any"
+      - "dartssh2: '>=2.0.0'"  # missing upper bound
+    required_fix: >
+      Use caret notation: "dartssh2: ^2.9.0" or specify both lower
+      and upper bounds explicitly.
+
+  - id: OS-012
+    title: Dev Dependencies Must Not Appear in Production Dependency Block
+    description: >
+      Packages used only for testing or code generation must be placed
+      under dev_dependencies, not dependencies.
+    violation_examples:
+      - mockito listed under dependencies
+      - build_runner listed under dependencies
+    required_fix: >
+      Move testing and code-generation packages to dev_dependencies.
+
+  - id: OS-013
+    title: No Abandoned or Unlicensed Packages
+    description: >
+      Packages must not be:
+        - Unpublished (path: or git: dependencies) unless the project owns the code.
+        - Abandoned (no pub.dev activity for more than 24 months) without written justification.
+        - Forked from a source without retaining the original license.
+    violation_examples:
+      - Using a git: dependency pointing to an unknown fork
+      - Relying on a package with a "discontinued" pub.dev badge
+    required_fix: >
+      Replace with an actively maintained, licensed alternative
+      or document justification in docs/project-overview.md.
+
+  # ----------------------------------------
+  # 3. Asset & Media Licensing
+  # ----------------------------------------
+
+  - id: OS-020
+    title: All Image Assets Must Be Openly Licensed
+    description: >
+      Images, icons, logos, and visual assets referenced in ScreenOverlay
+      or bundled in the app must be licensed under Creative Commons
+      (CC0, CC-BY, CC-BY-SA) or equivalent open licenses.
+      Copyrighted images (e.g., commercial stock photos, trademarked logos)
+      are prohibited unless the team owns the rights.
+    violation_examples:
+      - Using a Google stock image URL without verifying license
+      - Referencing a PNG scraped from a commercial website
+      - Using a trademarked logo not belonging to the team or LG project
+    required_fix: >
+      Replace with openly licensed assets from:
+        - Unsplash (unsplash.com) — free for commercial and personal use
+        - Wikimedia Commons — CC BY or public domain
+        - Liquid Galaxy official assets — explicitly permitted for LG demos
+
+  - id: OS-021
+    title: LG Official Assets May Be Used for LG Demo Purposes Only
+    description: >
+      The Liquid Galaxy logo and branding assets are permitted solely
+      for Liquid Galaxy-related demos and hackathon submissions
+      within the LG community context.
+      They must not be modified, redistributed commercially, or used
+      to imply endorsement outside the LG ecosystem.
+    required_fix: >
+      Ensure any LG official asset is used in a context clearly
+      associated with a Liquid Galaxy demo project.
+
+  - id: OS-022
+    title: External Asset URLs Must Remain Stable
+    description: >
+      ScreenOverlay imageUrl references must point to stable,
+      long-lived hosting (CDN, GitHub releases, official LG servers).
+      Temporary or expiring URLs are prohibited in submitted code.
+    violation_examples:
+      - Linking to a local ngrok tunnel
+      - Using a presigned S3 URL with an expiration header
+      - Referencing a Dropbox "temporary link"
+    required_fix: >
+      Host assets on a permanent URL (e.g., GitHub raw content,
+      official LG CDN, or a project-owned static host).
+
+  # ----------------------------------------
+  # 4. Source Code Publication
+  # ----------------------------------------
+
+  - id: OS-030
+    title: Project Must Include a Root LICENSE File
+    description: >
+      The repository root must contain a LICENSE file specifying the
+      open-source license under which the project is released.
+      Recommended: MIT or Apache-2.0 for hackathon submissions.
+    violation_examples:
+      - Repository submitted without any LICENSE file
+      - LICENSE file containing placeholder text only
+    required_fix: >
+      Add a LICENSE file to the repo root before final submission.
+      Use the full SPDX-approved license text.
+
+  - id: OS-031
+    title: No Secrets, Credentials, or API Keys in Source
+    description: >
+      The published repository must not contain any credentials,
+      API keys, SSH passwords, private tokens, or personal data
+      committed to the git history or present in any tracked file.
+    violation_examples:
+      - API key committed to lib/core/constants/config.dart
+      - SSH password hardcoded in any Dart source file
+      - .env file committed to the repository
+    cross_reference: SAF-003
+    required_fix: >
+      Use environment variables, runtime user input, or
+      flutter_secure_storage for all sensitive values.
+      Run `git log -p | grep -i "password\|api_key\|secret"` before publishing.
+      If secrets were ever committed, use git-filter-repo to purge history.
+
+  - id: OS-032
+    title: .gitignore Must Exclude Sensitive and Generated Files
+    description: >
+      The repository must have a properly configured .gitignore that excludes:
+        - build/
+        - .dart_tool/
+        - .flutter-plugins
+        - .env or *.env files
+        - Any file containing credentials or local machine paths
+    required_fix: >
+      Use the standard Flutter .gitignore template and extend it
+      to exclude any project-specific sensitive files.
+
+  - id: OS-033
+    title: README Must Credit All Major Open-Source Dependencies
+    description: >
+      The project README.md must include a Dependencies or Credits section
+      acknowledging the major open-source libraries used, their authors,
+      and their license type.
+    required_entries:
+      - dartssh2 (MIT)
+      - http (BSD-3)
+      - shared_preferences (BSD-3)
+      - open-meteo API (CC BY 4.0) if used
+    required_fix: >
+      Add a "Dependencies" or "Credits" table to README.md
+      following the format already established in the starter kit README.
+
+  # ----------------------------------------
+  # 5. Contribution & Attribution Discipline
+  # ----------------------------------------
+
+  - id: OS-040
+    title: AI-Generated Code Must Be Disclosed
+    description: >
+      Any code substantially generated by an AI tool (Gemini, GitHub Copilot,
+      Claude, ChatGPT, etc.) must be disclosed in the relevant file header
+      or in docs/project-overview.md.
+      AI-generated code is permitted but must be reviewed, understood,
+      and owned by the submitting team.
+    violation_examples:
+      - Submitting AI-generated code as entirely original without disclosure
+      - Claiming sole authorship of code the team did not write or review
+    required_fix: >
+      Add a comment such as:
+        // AI-assisted generation: initial scaffold by [Tool].
+        // Reviewed and modified by [Author].
+    note: >
+      This rule enforces transparency, not restriction.
+      AI assistance is encouraged — undisclosed AI authorship is not.
+
+  - id: OS-041
+    title: Forked StarterKit Must Retain Original Attribution
+    description: >
+      If the project is forked from the Liquid Galaxy Flutter StarterKit,
+      the original repository attribution must remain in the README.
+      Removing or overwriting original authorship is prohibited.
+    required_fix: >
+      Retain a "Based on / forked from:" reference in README.md
+      pointing to the original StarterKit repository URL.
+
+  - id: OS-042
+    title: Third-Party Code Contributions Must Be From Original Authors Only
+    description: >
+      All code committed to the repository must be either:
+        - Written by a team member
+        - Openly licensed and attributed (per OS-003)
+        - AI-assisted and disclosed (per OS-040)
+      Submitting code owned by a third party without permission is prohibited.
+    required_fix: >
+      Audit authorship before submission.
+      Remove any code whose provenance cannot be confirmed.
+
+  # ----------------------------------------
+  # 6. Hackathon Submission Compliance
+  # ----------------------------------------
+
+  - id: OS-050
+    title: Repository Must Be Publicly Accessible at Submission Time
+    description: >
+      The GitHub (or equivalent) repository must be set to public visibility
+      before the hackathon submission deadline.
+      Private repositories will be treated as non-submissions by judges.
+    required_fix: >
+      Confirm repository visibility setting is "Public" before submitting.
+
+  - id: OS-051
+    title: Submission Tag Must Be Applied
+    description: >
+      The final submitted commit must be tagged using the canonical
+      format defined in the pipeline exit condition.
+    required_format: >
+      git tag -a v1.0-T<task_number> -m "<feature> complete, quiz passed"
+    violation_examples:
+      - Submitting a branch without a release tag
+      - Tagging with an informal name such as "final" or "done"
+    required_fix: >
+      Apply the correct annotated git tag before submission.
+      Example: git tag -a v1.0-T2 -m "T2 weather feature complete, quiz passed"
+
+  - id: OS-052
+    title: Submission Must Not Include Broken or Placeholder Features
+    description: >
+      No feature advertised in the README or demo may be in a broken,
+      stubbed, or TODO state at submission time.
+      Placeholder functions that throw UnimplementedError are prohibited
+      in the submitted tagged commit.
+    violation_examples:
+      - showWeather() containing only "// TODO: implement"
+      - A button in the UI triggering a function that does nothing
+    required_fix: >
+      Either fully implement the feature or remove it from the UI
+      and README before tagging the submission.
+
+  - id: OS-053
+    title: Open-Meteo and Other Open APIs Must Be Cited in README
+    description: >
+      Any open or free API used in the project must be cited in the README
+      with its name, URL, and license/ToS reference.
+      Uncited API usage is considered incomplete attribution.
+    required_fix: >
+      Add each API to the "Resources" or "Dependencies" section
+      of README.md before tagging submission.
+
+  # ----------------------------------------
+  # 7. Community & Ethical Use
+  # ----------------------------------------
+
+  - id: OS-060
+    title: No Discriminatory, Harmful, or Offensive Content
+    description: >
+      The application must not display, transmit, or visualise content
+      that is discriminatory, politically inflammatory, sexually explicit,
+      or otherwise harmful on the Liquid Galaxy public display.
+    violation_examples:
+      - KML Placemarks with offensive descriptions
+      - ScreenOverlay images containing inappropriate content
+      - Demo city names or annotations used as slurs
+    required_fix: >
+      Review all user-facing content, KML descriptions, and asset
+      labels before demo and submission.
+
+  - id: OS-061
+    title: Application Must Not Collect or Transmit Personal Data
+    description: >
+      The application must not collect, log, store, or transmit
+      personally identifiable information (PII) of users or rig operators
+      without explicit consent.
+    violation_examples:
+      - Logging SSH usernames to an external server
+      - Sending rig IP addresses to a third-party analytics endpoint
+    required_fix: >
+      Audit all network calls to confirm no PII is transmitted.
+      Shared Preferences storage is limited to connection config only.
+
+  - id: OS-062
+    title: Demo Must Be Reproducible by Judges
+    description: >
+      The submitted project must be buildable and runnable
+      by any judge from a clean clone using only:
+        flutter pub get
+        flutter run
+      No undocumented environment setup steps are permitted.
+    violation_examples:
+      - Hard dependency on a local file not in the repository
+      - Requiring a secret .env file not described in README
+    required_fix: >
+      Ensure README setup instructions are complete and accurate.
+      All runtime configuration must be achievable through the
+      in-app Settings screen (IP, port, username, password, screens).

@@ -1,0 +1,121 @@
+version: 1.1
+
+system:
+  name: liquid-galaxy-flutter-agent
+  mode: strict
+  fail_fast: true
+  deterministic_execution: true
+  stage_locking: true
+
+defaults:
+  workflow: full-feature
+  quiz_required: true
+  remediation_required: true
+
+policy_lock:
+  flutter-architecture: 1.1
+  lg-rig-constraints: 1.1
+  safety: 1.1
+
+enforcement:
+
+  git_clean_required: true
+  tests_must_pass: true
+  analyze_must_pass: true
+  no_warnings_allowed: true
+  no_skipped_tests_allowed: true
+
+  policy_traceability_required: true
+  explicit_policy_id_required: true
+
+  async_safety_enforced: true
+  unawaited_future_forbidden: true
+
+  # ----------------------------------------
+  # Execution Safety Controls
+  # ----------------------------------------
+
+  max_execution_time_per_task: 300   # seconds
+  infinite_loop_protection: true
+
+  ssh_restrictions:
+    single_service_authority: true
+    no_hardcoded_credentials: true
+    timeout_required: true
+    forbidden_commands:
+      - sudo
+      - apt
+      - wget
+      - rm -rf
+
+  # ----------------------------------------
+  # KML Performance Constraints
+  # ----------------------------------------
+
+  kml_requirements:
+    linear_ring_closed: true
+    extrude_required: true
+    altitude_mode_required: relativeToGround
+    overlay_must_use_screenoverlay: true
+    max_kml_payload_size_kb: 100
+    optimize_coordinate_density: true
+
+mentor_escalation:
+
+  trigger_on:
+    - architecture_confusion
+    - missing_policy_reference
+    - async_misunderstanding
+    - failure_case_confusion
+    - production_risk_unrecognized
+
+  skill: lg-skeptical-mentor
+
+workflow_permissions:
+
+  full-feature:
+    allow_stage_skip: false
+
+  add-api:
+    allow_stage_skip: false
+
+  add-screen:
+    allow_stage_skip: false
+
+  review-only:
+    allow_execution_stage: false
+    allow_planning_stage: false
+
+logging:
+
+  require_review_document: true
+  require_quiz_document: true
+  require_plan_document: true
+  commit_message_validation: true
+
+contest_mode:
+
+  gsoc_grade: true
+  cargo_cult_protection: true
+  enforce_policy_mapping: true
+  enforce_mock_verification: true
+  enforce_verify_in_order: true
+
+exit_rules:
+
+  pass_requires:
+    - review_pass
+    - quiz_pass
+    - no_policy_violation
+    - git_clean
+
+  conditional_pass_requires:
+    - remediation_plan_generated
+
+  fail_conditions:
+    - policy_violation
+    - security_breach
+    - async_race_condition
+    - unverified_failure_case
+    - execution_timeout_exceeded
+    - kml_payload_exceeds_limit

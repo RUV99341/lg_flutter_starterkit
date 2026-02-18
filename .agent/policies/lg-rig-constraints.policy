@@ -1,0 +1,190 @@
+version: 1.1
+name: lg-rig-constraints
+description: >
+  Enforces physical Liquid Galaxy rig constraints, screen geometry rules,
+  command routing discipline, deterministic multi-screen behavior,
+  and demo-state hygiene.
+
+enforcement_level: strict
+
+rules:
+
+  # ----------------------------------------
+  # 1. Screen Geometry Constraints
+  # ----------------------------------------
+
+  - id: LG-001
+    title: Portrait Orientation Enforcement
+    description: >
+      All layouts must be constrained to Portrait (1080x1920)
+      to match physical Liquid Galaxy screen specifications.
+    prohibited_patterns:
+      - Landscape-only layouts
+      - Adaptive orientation switching
+      - MediaQuery-based orientation branching
+    required_fix: >
+      Lock layout to portrait and respect 1080x1920 dimensions.
+
+  - id: LG-002
+    title: Identical Screen Assumption
+    description: >
+      All screens in the rig are identical in resolution and orientation.
+      Code must not assume heterogeneous screen sizes.
+    required_fix: >
+      Treat rig as one unified panoramic display.
+
+  - id: LG-003
+    title: World Width Must Be Deterministic
+    description: >
+      WORLD_WIDTH must equal screenWidth × screenCount.
+      The visual center of a 3-screen rig is the center of Screen 2.
+    required_guideline: >
+      Use WORLD_WIDTH / 2 to center critical geometry (e.g., pyramid apex).
+
+  # ----------------------------------------
+  # 2. Master–Slave Command Discipline
+  # ----------------------------------------
+
+  - id: LG-010
+    title: Master Node Authority
+    description: >
+      All KML and overlay commands must be routed through the Master node (.1).
+      Direct slave communication is prohibited unless explicitly justified.
+    required_fix: >
+      Use Master node relay model.
+
+  - id: LG-011
+    title: Deterministic SSH Port Usage
+    description: >
+      SSH communication must use configured port (22 or 2222).
+    required_fix: >
+      Use LGConfig or user configuration.
+
+  - id: LG-012
+    title: No Duplicate Connection Channels
+    description: >
+      Only one active LGConnectionService instance may control the rig.
+    required_fix: >
+      Centralize connection management.
+
+  # ----------------------------------------
+  # 3. KML Injection & Overlay Constraints
+  # ----------------------------------------
+
+  - id: LG-020
+    title: Clear Before Inject Rule (Canonical)
+    description: >
+      New geospatial KML must not be injected before clearing existing content.
+      Failure to clear results in "Ghosting" where old polygons remain visible.
+    required_sequence:
+      - clearKML()
+      - sendKML()
+    required_test_enforcement: >
+      verifyInOrder([mock.clearKML(), mock.sendKML()]);
+
+  - id: LG-021
+    title: Overlay Persistence Awareness
+    description: >
+      clearKML() does NOT remove ScreenOverlay elements.
+      Overlays must be explicitly managed.
+    required_fix: >
+      Use sendScreenOverlay() intentionally.
+
+  - id: LG-022
+    title: No Simultaneous KML Flooding
+    description: >
+      Multiple sendKML() calls must not occur in parallel.
+    required_fix: >
+      Await each LG command sequentially.
+
+  - id: LG-041
+    title: Persistent Logo Must Use ScreenOverlay
+    description: >
+      Demo logos must use ScreenOverlay to remain visible during camera movement.
+      The Icon href must reference a reachable URL or a valid local path
+      already synchronized to the Master node.
+    violation_effect: >
+      Broken image renders persistent red "X" until manual reset.
+
+  - id: LG-052
+    title: Clear-On-Exit Requirement
+    description: >
+      The application must send clearKML() when demo state is exited
+      or when the app is paused.
+    required_fix: >
+      Ensure cleanup lifecycle hook triggers clearKML().
+
+  # ----------------------------------------
+  # 4. Geometry Rendering Constraints
+  # ----------------------------------------
+
+  - id: LG-030
+    title: Polygon Loop Closure Required
+    description: >
+      LinearRing coordinates must start and end with identical points.
+    violation_effect: >
+      Open polygon face or rendering artifact.
+
+  - id: LG-031
+    title: Extrusion Required for 3D Structures
+    description: >
+      3D objects must include <extrude>1</extrude>.
+    violation_effect: >
+      Shape renders flat on ground.
+
+  - id: LG-032
+    title: Relative Altitude Required
+    description: >
+      3D objects must use <altitudeMode>relativeToGround</altitudeMode>.
+    prohibited_values:
+      - clampToGround
+
+  # ----------------------------------------
+  # 5. Visual Stability Rules
+  # ----------------------------------------
+
+  - id: LG-040
+    title: Bezel-Safe Placement Required
+    description: >
+      Important UI elements must not be placed at extreme horizontal edges
+      due to bezel interruption.
+    required_fix: >
+      Use safe margins and consider multi-screen seam alignment.
+
+  # ----------------------------------------
+  # 6. Performance & Determinism
+  # ----------------------------------------
+
+  - id: LG-050
+    title: Await All LG Commands
+    description: >
+      All LGConnectionService calls must be awaited.
+    required_fix: >
+      Enforce async sequencing.
+
+  - id: LG-051
+    title: No Frame-Dependent LG Calls
+    description: >
+      Liquid Galaxy service calls (sendKML, clearKML, etc.) must never be 
+      executed inside a Flutter build() method.
+    prohibited_patterns:
+      - Calling LGConnectionService inside a Widget's build()
+      - Triggering LG commands directly from getter-based UI properties
+    required_fix: >
+      Move LG service calls to initState(), button callbacks, 
+      or lifecycle-aware controllers.
+
+  # ----------------------------------------
+  # 7. Data Transmission & Rendering
+  # ----------------------------------------
+
+  - id: LG-060
+    title: KML Payload Size Limit
+    description: >
+      KML payloads must not exceed 100KB to prevent SSH transmission failures 
+      and Google Earth rendering degradation on the rig.
+    enforcement:
+      max_size_kb: 100
+    required_fix: >
+      Reduce coordinate density or split the geometry into multiple 
+      managed KML documents.

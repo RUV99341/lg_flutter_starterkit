@@ -1,0 +1,156 @@
+version: 1.1
+name: safety
+description: >
+  Enforces operational security, safe SSH execution,
+  credential protection, deterministic LLM behavior,
+  runtime resilience, and demo-state hygiene.
+
+enforcement_level: strict
+
+rules:
+
+  # ----------------------------------------
+  # 1. SSH & Command Safety
+  # ----------------------------------------
+
+  - id: SAF-001
+    title: No Arbitrary Shell Execution
+    description: >
+      The application must not execute arbitrary shell commands
+      outside approved LG pathways.
+    prohibited_patterns:
+      - Passing user input directly to SSH shell
+      - Dynamic command concatenation
+    required_fix: >
+      Restrict commands to approved whitelist only.
+
+  - id: SAF-002
+    title: No Destructive System Commands
+    description: >
+      Commands such as rm -rf, shutdown, reboot, apt, or system-level
+      destructive operations must not be executed automatically.
+    exception:
+      - Explicit user-triggered reboot with confirmation
+
+  - id: SAF-003
+    title: SSH Credentials Must Not Be Hardcoded
+    description: >
+      IP addresses, usernames, and passwords must not be embedded
+      directly in source code.
+    required_fix: >
+      Accept credentials via secure configuration or user input.
+
+  - id: SAF-004
+    title: Approved Command Whitelist
+    description: >
+      Only allow execution of echo or printf commands
+      targeting /tmp/query.txt on the Master node.
+      Execution of sudo, apt, wget, curl, or other binaries
+      must be blocked at the Service layer.
+    required_fix: >
+      Validate outgoing SSH command against whitelist.
+
+  # ----------------------------------------
+  # 2. API & Network Safety
+  # ----------------------------------------
+
+  - id: SAF-020
+    title: Async Await Enforcement
+    description: >
+      All external service calls (SSH/API) must be explicitly awaited.
+      Unawaited futures are prohibited as they create non-deterministic 
+      race conditions on the rig.
+    required_fix: >
+      Add 'await' keyword to the service call or return the Future.
+
+  - id: SAF-021
+    title: No Unsafe Lifecycle LG Calls
+    description: >
+      LG commands must not be triggered in a way that risks 
+      multiple simultaneous SSH connections (e.g., inside build()).
+    required_fix: >
+      Use proper state management or lifecycle methods.
+
+  - id: SAF-022
+    title: API Error Boundary Required
+    description: >
+      External API services must handle 4xx, 5xx, and malformed
+      JSON errors without crashing the application.
+    required_fix: >
+      Implement try-catch blocks and error state mapping.
+
+  - id: SAF-033
+    title: SSH Timeout Enforcement
+    description: >
+      All SSH connection attempts and command executions must implement 
+      a strict timeout to prevent UI thread freezing and resource exhaustion.
+    required_value: 5000  # milliseconds
+    implementation_guideline: >
+      final client = SSHClient(
+        host: ...,
+        port: 22,
+        identities: ...,
+        connectionTimeout: Duration(milliseconds: 5000),
+      );
+    required_fix: >
+      Implement Duration(milliseconds: 5000) for all SSHClient and 
+      Command executions. Failures must trigger an error fallback.
+
+  - id: SAF-034
+    title: API Rate Limiting Required
+    description: >
+      External API integrations must implement rate limiting or caching
+      to prevent request flooding during continuous demo operation.
+    required_fix: >
+      Implement request throttling or response caching in ApiService.
+
+  # ----------------------------------------
+  # 3. File & Resource Safety
+  # ----------------------------------------
+
+  - id: SAF-030
+    title: No Unsafe File Writes
+    description: >
+      Application must not write arbitrary files
+      to the LG master filesystem.
+    required_fix: >
+      Restrict file writes to controlled /tmp/ paths.
+
+  - id: SAF-031
+    title: Overlay Asset Validation
+    description: >
+      ScreenOverlay image URLs must be validated as reachable
+      before injection to prevent persistent rendering artifacts.
+    required_fix: >
+      Verify URL status code 200 before calling sendScreenOverlay().
+
+  - id: SAF-032
+    title: SSH Session Cleanup Required
+    description: >
+      Active SSH sessions must be closed when app is disposed.
+    required_fix: >
+      Dispose of SSH clients in the service's dispose() or on app close.
+
+  # ----------------------------------------
+  # 4. Demo-State Hygiene
+  # ----------------------------------------
+
+  - id: SAF-040
+    title: No State Leakage Between Sessions
+    description: >
+      The application must not retain prior demo state
+      across sessions unintentionally.
+    required_fix: >
+      Ensure clean initialization on app start.
+
+  - id: SAF-041
+    title: Test Coverage Required for LG Actions
+    description: >
+      All LG-triggering actions must have corresponding unit tests.
+    required_fix: >
+      Add mock verification for sendKML and sendScreenOverlay.
+
+  - id: SAF-042
+    title: Final State Reset Required
+    description: See LG-052. Safety enforcement of LG rig cleanup requirement.
+    cross_reference: LG-052

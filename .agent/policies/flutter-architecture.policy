@@ -1,0 +1,181 @@
+version: 1.1
+name: flutter-architecture
+description: >
+  Enforces Clean Architecture boundaries, deterministic service usage,
+  centralized KML construction, and test-verifiable LG behavior
+  for Flutter-based Liquid Galaxy applications.
+
+enforcement_level: strict
+
+rules:
+
+  # ----------------------------------------
+  # 1. Layer Separation Rules
+  # ----------------------------------------
+
+  - id: FA-001
+    title: No Business Logic in Presentation Layer
+    description: >
+      Widgets and UI classes must not contain data transformation,
+      KML generation, SSH logic, or API calls.
+    violation_examples:
+      - Calling LGConnectionService inside build()
+      - Generating XML strings inside a widget
+      - Performing HTTP requests in UI layer
+    required_fix: >
+      Move logic to domain or services layer.
+
+  - id: FA-002
+    title: Services Layer Owns External Communication
+    description: >
+      All SSH, API, and KML communication must flow through services/.
+    allowed_services:
+      - LGConnectionService
+      - ApiService
+      - KmlBuilder
+    violation_examples:
+      - Creating new SSH client inside a widget
+      - Creating duplicate connection classes
+    required_fix: >
+      Use existing LGConnectionService scaffold.
+
+  - id: FA-003
+    title: Domain Layer Must Be UI-Agnostic
+    description: >
+      Domain entities and use cases must not import Flutter packages.
+    prohibited_imports:
+      - package:flutter/*
+    required_fix: >
+      Move UI-dependent logic to presentation layer.
+
+  - id: FA-004
+    title: KML Construction Must Be Centralized
+    description: >
+      KML string construction must occur only inside a dedicated
+      KmlBuilder or KmlService within the services layer.
+      Raw XML strings are prohibited inside Repositories,
+      UseCases, or Widgets.
+    violation_examples:
+      - Building '<Placemark>' XML inside a UseCase
+      - Returning raw XML from domain layer
+      - Concatenating XML strings in a Repository
+    required_fix: >
+      Move KML construction logic to KmlBuilder in services layer.
+
+  # ----------------------------------------
+  # 2. LG-Specific Architecture Rules
+  # ----------------------------------------
+
+  - id: FA-010
+    title: Geospatial Content Must Use sendKML()
+    description: >
+      Placemarks, LookAt, Tours, and Polygon geometries
+      must use sendKML().
+    prohibited_for:
+      - ScreenOverlay logic
+    violation_examples:
+      - Using sendScreenOverlay for pyramid geometry
+    required_fix: >
+      Route geospatial KML through sendKML().
+
+  - id: FA-011
+    title: Persistent UI Must Use sendScreenOverlay()
+    description: >
+      Logos, HUD elements, and persistent overlays
+      must use sendScreenOverlay().
+    violation_examples:
+      - Sending logo as Placemark
+      - Sending logo via sendKML()
+    required_fix: >
+      Replace with sendScreenOverlay() call.
+
+- id: FA-012
+    title: Rig Constraint Compliance (Ghosting)
+    description: >
+      Implementation must respect the ghosting prevention sequence 
+      defined in LG-020.
+    required_fix: >
+      Ensure clearKML() is called before sendKML() within the service/use-case.
+
+  - id: FA-013
+    title: Ghosting Prevention Verification
+    description: >
+      Unit tests must provide proof of the sequence required by LG-020.
+    required_verification:
+      - verifyInOrder([mock.clearKML(), mock.sendKML()]);
+
+  # ----------------------------------------
+  # 3. Deterministic Geometry Rules (T2 Specific)
+  # ----------------------------------------
+
+  - id: FA-020
+    title: Polygon Must Close Loop
+    description: >
+      First and last coordinates in LinearRing must match.
+    required_validation: >
+      Validate coordinate[0] == coordinate[last].
+
+  - id: FA-021
+    title: Pyramid Must Extrude
+    description: >
+      3D pyramid must include <extrude>1</extrude>.
+    required_validation: >
+      Ensure extrude tag exists and equals 1.
+
+  - id: FA-022
+    title: Altitude Mode Enforcement
+    description: >
+      3D geometry must use <altitudeMode>relativeToGround</altitudeMode>.
+    prohibited_values:
+      - clampToGround
+    required_fix: >
+      Replace altitudeMode with relativeToGround.
+
+  # ----------------------------------------
+  # 4. Testing & Verification Rules
+  # ----------------------------------------
+
+  - id: FA-030
+    title: Service Calls Must Be Mockable
+    description: >
+      LGConnectionService must be mockable for unit testing.
+    violation_examples:
+      - Using concrete implementation directly in widget tests
+    required_fix: >
+      Inject service via dependency injection.
+
+  - id: FA-031
+    title: Logo Action Must Verify sendScreenOverlay()
+    description: >
+      Unit tests must verify exactly one sendScreenOverlay() call
+      when logo action is triggered.
+    required_verification:
+      - verify(mock.sendScreenOverlay(...)).called(1);
+
+  - id: FA-032
+    title: Pyramid Action Must Verify sendKML()
+    description: >
+      Unit tests must verify exactly one sendKML() call
+      when pyramid action is triggered.
+    required_verification:
+      - verify(mock.sendKML(...)).called(1);
+
+  # ----------------------------------------
+  # 5. Prohibited Architectural Patterns
+  # ----------------------------------------
+
+  - id: FA-040
+    title: No Duplicate SSH Logic
+    description: >
+      Do not create new SSH services outside LGConnectionService.
+    violation_examples:
+      - New SSH client class in another file
+    required_fix: >
+      Centralize SSH logic in LGConnectionService.
+
+  - id: FA-041
+    title: No Hardcoded Credentials
+    description: >
+      IP addresses, usernames, and passwords must not be hardcoded.
+    required_fix: >
+      Pass via configuration or secure user input.

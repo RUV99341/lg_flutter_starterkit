@@ -1,0 +1,67 @@
+name: lg_flutter_starterkit
+description: >
+  A Flutter starter kit for building Liquid Galaxy controller applications.
+  Supports KML injection, SSH communication, screen overlays, 3D geometry,
+  camera fly-to, and live weather visualisation via Open-Meteo.
+  Built for hackathons and rapid prototyping on the Liquid Galaxy platform.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ---------------------------------------------------------------
+  # SSH Communication with LG Master Node
+  # Used by: LGConnectionService
+  # ---------------------------------------------------------------
+  dartssh2: ^2.9.0
+
+  # ---------------------------------------------------------------
+  # Local Persistence — stores IP, port, username, screen count
+  # Used by: SettingsScreen
+  # ⚠️  Stores password in plaintext (starter kit only).
+  #     Replace with flutter_secure_storage for production.
+  # ---------------------------------------------------------------
+  shared_preferences: ^2.3.2
+
+  # ---------------------------------------------------------------
+  # HTTP Client — external API calls (Open-Meteo weather API)
+  # Used by: ApiService
+  # ---------------------------------------------------------------
+  http: ^1.2.1
+
+  # ---------------------------------------------------------------
+  # Icons
+  # ---------------------------------------------------------------
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Static analysis — enforces Flutter best practices
+  flutter_lints: ^6.0.0
+
+  # ---------------------------------------------------------------
+  # Recommended for hackathon testing: add mockito + build_runner
+  # to generate mocks for IApiService, IKmlBuilder, ILGConnectionService
+  #
+  # mockito: ^5.4.4
+  # build_runner: ^2.4.9
+  # ---------------------------------------------------------------
+
+flutter:
+  uses-material-design: true
+
+  # ---------------------------------------------------------------
+  # To use a local LG logo asset instead of the remote URL,
+  # create assets/images/ and uncomment below:
+  # ---------------------------------------------------------------
+  # assets:
+  #   - assets/images/lg_logo.png
+  #   - assets/images/
